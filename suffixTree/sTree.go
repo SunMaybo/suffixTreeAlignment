@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"math"
+	"bytes"
+	"github.com/bradleyjkemp/memviz"
 )
+// was very useful for debugging - "github.com/davecgh/go-spew/spew"
+
 
 // the code follows Ukkonen's algorithm from the lecture notes
 
@@ -146,6 +150,8 @@ func build_suffix_tree(text string) *node {
 				active_edge = tedge
 			}
 
+			last_node = nil
+
 			// fmt.Println("\t ok - ", ok)
 			// fmt.Println("\t active_edge - ", active_edge)
 		} else if active_edge == nil {
@@ -219,7 +225,7 @@ func build_suffix_tree(text string) *node {
 				// 	active_edge = tedge
 				// }
 
-				if last_node != nil {
+				if last_node != nil && remainder != 0{
 					// fmt.Println("\t last node not nil")
 					last_node.suffix_link = new_node
 				}
@@ -292,6 +298,7 @@ func build_suffix_tree(text string) *node {
 		// fmt.Println("\t last_node - ", last_node)
 		// // fmt.Println("\t temp_edge - ", temp_edge)
 		// fmt.Println("\t ROOT - ", root)
+		// spew.Dump(root)
 		// fmt.Println("END ITERATION")
 	}
 	return root
@@ -299,12 +306,28 @@ func build_suffix_tree(text string) *node {
 
 func main() {
 	// tree := build_suffix_tree("gattaca")
-	var text string = "abcabxabcd"
-	fmt.Println("start building tree")
-	var tree *node = build_suffix_tree(text)
-	fmt.Println("finished building tree")
+	// var text string = "abcabxabcd"
+	// fmt.Println("start building tree")
+	// var tree *node = build_suffix_tree(text)
+	// fmt.Println("finished building tree")
 
-	fmt.Println("search tree")
-	fmt.Println(tree.search("abcd", text, 3))
-	// fmt.Println(build_suffix_tree("gattaca"))
+	// fmt.Println("search tree")
+	// fmt.Println(tree.search("abce", text, 3))
+	// var tree *node = build_suffix_tree("gattaca")
+	var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC"
+	// fmt.Println("start building tree")
+	var tree *node = build_suffix_tree(text)
+	// fmt.Println("finished building tree")
+	
+	// spew.Dump(tree)
+
+	buf := &bytes.Buffer{}
+	memviz.Map(buf, tree)
+	fmt.Println(buf.String())
+
+	// fmt.Println(tree)
+
+	// fmt.Println("search tree")
+	// fmt.Println(tree.search("AGACTGG", text, 3))
+
 }
