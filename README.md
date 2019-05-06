@@ -16,6 +16,7 @@ can now output to a graphviz plot to visualize the suffix tree
 
 Written in GOLANG
 
-Note: can/might have bugs
+Note:
 
-- Found none so far :)
+- can/might have bugs
+- lots of print statements
