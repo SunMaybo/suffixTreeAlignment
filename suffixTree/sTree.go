@@ -5,8 +5,9 @@ import (
 	"math"
 	"bytes"
 	"github.com/bradleyjkemp/memviz"
+	"github.com/davecgh/go-spew/spew"
 )
-// was very useful for debugging - "github.com/davecgh/go-spew/spew"
+// was very useful for debugging - 
 
 
 // the code follows Ukkonen's algorithm from the lecture notes
@@ -131,6 +132,7 @@ func build_suffix_tree(text string) *node {
 	root := new(node)
 	root.edges = make(map[string]*edge)
 	root.ntype = "root"
+
 	var active_node *node = root
 	var active_edge *edge
 	var active_string string
@@ -138,175 +140,258 @@ func build_suffix_tree(text string) *node {
 	var last_node *node
 	var text_length = len(text)
 	var cindex int = 0
+	var FLAG_END bool = false
 
-	for cindex < text_length {
+	for {
 		ts := string(text[cindex])
-		// fmt.Println("Iterating - ",cindex, ts)
+
+		fmt.Println("Iterating - ",cindex, ts)
+
 		if remainder == 0 {
-			// fmt.Println("\t remainder is 0")
-			remainder++
-			tedge, ok := active_node.edges[ts]
-			if ok {
-				active_edge = tedge
-			}
-
+			fmt.Println("\t remainder is 0")
+			remainder = 1
+			active_string = ""
+			active_length = 0
 			last_node = nil
-
-			// fmt.Println("\t ok - ", ok)
-			// fmt.Println("\t active_edge - ", active_edge)
-		} else if active_edge == nil {
-			// fmt.Println("\t active edge is nil -> see if one exists")
-
 			tedge, ok := active_node.edges[ts]
 			if ok {
 				active_edge = tedge
 			}
-
-			// fmt.Println("\t ok - ", ok)
-			// fmt.Println("\t active_edge - ", active_edge)
+		} else if active_edge == nil {
+			fmt.Println("\t remainder not 0 but active edge is nil")
+			if active_length > 0 {
+				tedge, ok := active_node.edges[string(active_string[0])]
+				if ok {
+					active_edge = tedge
+				}
+			} else {
+				tedge, ok := active_node.edges[ts]
+				if ok {
+					active_edge = tedge
+				}	
+			}
 		}
-		// fmt.Println("\t active_node - ", active_node)
-		// fmt.Println("\t after remainder")
-		// fmt.Println("\t active edge - ", active_edge)
+
+		fmt.Println("\t active_node - ", active_node)
+		fmt.Println("\t after remainder")
+		fmt.Println("\t active edge - ", active_edge)
 
 		if active_edge == nil {
-			// no match or no active edge
-			
-			// fmt.Println("\t no active edge")
+			fmt.Println("\t no active edge")
 			new_edge := &edge{start_index: cindex, end_index: text_length, end_node: nil}
 			active_node.edges[ts] = new_edge
 			remainder--
-			cindex++
-		} else {
-			// fmt.Println("\t edge FOUNDDDDD")
-			// fmt.Println("\t active edge - ", active_edge)
-			// fmt.Println("\t active edge - ", *active_edge)
-			// fmt.Println("\t active_string - ", active_string)
-			// fmt.Println("\t active_length - ", active_length)
 
-			// fmt.Println("\t next character in edge - ", string(text[active_edge.start_index + active_length]))
-			// matches edge - could also continue from current match
-			if ts == string(text[active_edge.start_index + active_length]) {
-				// fmt.Println("\t char matched")
-				active_string += ts
-				active_length++
-				remainder++
-				cindex++
+			fmt.Println("\t add a new edge")
+			last_node = nil
 
-				// does node need to be updated ?
-				if active_edge.start_index + active_length >= active_edge.end_index {
-					// fmt.Println("\t EDGE END REACHED - update active_node")
-					active_node = active_edge.end_node
-					active_edge = nil
-					active_string = ""
-					active_length = 0
+			if active_length > 0 {
+				active_length--
+			}
+
+			if active_node.ntype != "root" {
+				fmt.Println("\t Follow suffix link if not root and exists")
+				if active_node.suffix_link != nil {
+					active_node = active_node.suffix_link
+				} else {
+					active_node = root
 				}
 			} else {
-				//split this edge
-				// fmt.Println("\t char did not match")
-				new_node := new(node)
-				new_node.edges = make(map[string]*edge)
-				new_node.ntype = "inner"
+				fmt.Println("\t Root node, check next char")
+				cindex++
+			}
 
-				// add two edges to this node, one for the original, one at the split
-				// fmt.Println("\t string mismatched at edge - ", string(text[active_edge.start_index + active_length]))
-				// fmt.Println("\t current string - ", ts )
-				new_node.edges[string(text[active_edge.start_index + active_length])] = &edge{start_index: active_edge.start_index + active_length, end_index: text_length, end_node: nil}
-				new_node.edges[ts] = &edge{start_index: cindex, end_index: text_length, end_node: nil}
+			active_edge = nil
+		} else {
+			fmt.Println("\t edge FOUNDDDDD")
+			fmt.Println("\t active edge - ", active_edge)
+			fmt.Println("\t active edge - ", *active_edge)
+			fmt.Println("\t active_string - ", active_string)
+			fmt.Println("\t active_length - ", active_length)
 
-				// new_node.ntype = "inner"
-				// fmt.Println("\t new node - ", new_node)
-				active_edge.end_node = new_node
-				active_edge.end_index = active_edge.start_index + active_length
-
-				// after adding update active point
-				// tedge, ok := active_node.edges[ts]
-				// if ok {
-				// 	active_edge = tedge
+			fmt.Println("\t skip all the way to the last edge ?")
+			for (active_edge.end_index - active_edge.start_index) <= active_length {
+				fmt.Println("\t skipping - length of edge < active_length")
+				active_length = active_length - (active_edge.end_index - active_edge.start_index)
+				// if active_length > 0 {
+				// 	active_string = text[cindex - active_length: active_length]
+				// } else {
+				// 	active_string = ts
 				// }
-
-				if last_node != nil && remainder != 0{
-					// fmt.Println("\t last node not nil")
-					last_node.suffix_link = new_node
-				}
-
-				// fmt.Println("\t before last_node - ", last_node)
-				last_node = new_node
-				// fmt.Println("\t active_string - ", active_string)
-
-				var node_reset int = 0
-				if active_node.ntype != "root" && active_node.suffix_link != nil {
-					// fmt.Println("\t suffix link exists")
-					active_node = active_node.suffix_link
-					tedge, ok := active_node.edges[string(active_string[0])]
-					if ok {
-						active_edge = tedge
-					} else {
-						active_edge = nil
-					}
-
-					remainder--
-					node_reset++
-				} else if active_node.ntype != "root" {
-					// fmt.Println("\t suffix link is not root")
-					active_node = root
-					tedge, ok := active_node.edges[string(active_string[0])]
-					if ok {
-						active_edge = tedge
-					} else {
-						active_edge = nil
-					}
-
-					remainder--
-					node_reset++
-				}
-
-				if node_reset == 0 {
-					if len(active_string) > 1 {
-						// fmt.Println("\t active length > 1")
-						tedge, ok := active_node.edges[string(active_string[1])]
-						if ok {
-							active_edge = tedge
-						} else {
-							active_edge = nil
-						}
-	
-						active_string = active_string[1:]
-						active_length--
-						remainder--
-						// if last_node != nil {
-						// 	fmt.Println("\t last node not nil")
-						// 	last_node.suffix_link = new_node
-						// }
-					} else {
-						// fmt.Println("\t active length <= 1")
-						active_string = ""
-						active_length = 0
-						active_edge = nil
-						last_node = nil
-						remainder = 0
-					}
+				// active_string = text[cindex - active_length: active_length]
+				active_node = active_edge.end_node
+				tedge, ok := active_node.edges[string(text[cindex - active_length])]
+				if ok {
+					active_edge = tedge
+				} else {
+					// active_edge = nil
+					break
 				}
 			}
+
+			fmt.Println("\t no more skips length of edge > active_length ")
+			fmt.Println("\t active edge - ", active_edge)
+			fmt.Println("\t active edge - ", *active_edge)
+			fmt.Println("\t active_string - ", active_string)
+			fmt.Println("\t active_length - ", active_length)
+
+			if active_edge != nil {
+				fmt.Println("\t next character in edge - ", string(text[active_edge.start_index + active_length]))
+				if ts == string(text[active_edge.start_index + active_length]) {
+					fmt.Println("\t char matched")
+					cindex++
+					remainder++
+					active_length++
+					active_string += ts
+					last_node = nil
+
+					if active_edge.end_index != text_length {
+						if active_edge.end_index - active_edge.start_index <= active_length {
+							fmt.Println("\t length of edge <= active_length ")
+
+							active_node = active_edge.end_node
+							fmt.Println("\t active edge - ", active_edge)
+							fmt.Println("\t active_string - ", active_string)
+							fmt.Println("\t active_length - ", active_length)
+
+							// if active_length > 0 {
+							// 	active_string = text[(cindex - active_length): active_length]
+							// } else {
+							// 	active_string = ts
+							// }
+							active_length = active_length - (active_edge.end_index - active_edge.start_index)
+
+							// active_string = ts
+							if cindex != text_length {
+								tedge, ok := active_node.edges[string(text[cindex - active_length])]
+								if ok {
+									active_edge = tedge
+								} else {
+									active_edge = nil
+								}
+							}
+						}
+					}	
+				} else {
+					fmt.Println("\t no active edge, so no char did not match")
+	
+					new_node := new(node)
+					new_node.edges = make(map[string]*edge)
+					new_node.ntype = "inner"
+					fmt.Println("\t make sure there's no existing edge already")
+		
+					// add two edges to this node, one for the original, one at the split
+					fmt.Println("\t string mismatched at edge - ", string(text[active_edge.start_index + active_length]))
+					fmt.Println("\t current string - ", ts )
+					new_node.edges[string(text[active_edge.start_index + active_length])] = &edge{start_index: active_edge.start_index + active_length, end_index: active_edge.end_index, end_node: active_edge.end_node}
+					new_node.edges[ts] = &edge{start_index: cindex, end_index: text_length, end_node: nil}
+					fmt.Println("\t new node - ", new_node)
+					fmt.Println("\t also update active edge - ")
+					active_edge.end_node = new_node
+					active_edge.end_index = active_edge.start_index + active_length
+	
+					if last_node != nil && remainder != 0{
+						fmt.Println("\t last node not nil, add suffix link")
+						last_node.suffix_link = new_node
+					}
+					fmt.Println("\t before last_node - ", last_node)
+					last_node = new_node
+					fmt.Println("\t active_string - ", active_string)			
+					
+					remainder--
+					fmt.Println("\t active_node - ", active_node)
+					fmt.Println("\t active edge - ", active_edge)
+					fmt.Println("\t active_string - ", active_string)
+					fmt.Println("\t active_length - ", active_length)
+					fmt.Println("\t remainder - ", remainder)
+					fmt.Println("\t last_node - ", last_node)
+					if active_node.ntype == "root" {
+						active_length--
+						// active_string = string(text[cindex - active_length])
+						active_string = active_string[1:]
+						active_edge = nil
+					} else {
+						fmt.Println("\t Follow suffix link if not root and exists")
+						active_string = active_string[1:]
+						// active_length--
+						if active_node.suffix_link != nil {
+							fmt.Println("\t suffix link exists")
+							active_node = active_node.suffix_link
+
+							tedge, ok := active_node.edges[string(text[cindex-1])]
+							if ok {
+								active_edge = tedge
+							} else {
+								active_edge = nil
+							}	
+						} else {
+							active_node = root
+
+							if active_length > 0 {
+								tedge, ok := active_node.edges[string(active_string[0])]
+								if ok {
+									active_edge = tedge
+								}
+							} else {
+								tedge, ok := active_node.edges[ts]
+								if ok {
+									active_edge = tedge
+								}	
+							}
+
+							// tedge, ok := active_node.edges[string(active_string[0])]
+							// if ok {
+							// 	active_edge = tedge
+							// } else {
+							// 	active_edge = nil
+							// }	
+						}
+
+					}
+				}
+			} 
 		}
 
-		// fmt.Println("\t active_node - ", active_node)
-		// fmt.Println("\t active edge - ", active_edge)
-		// fmt.Println("\t active_string - ", active_string)
-		// fmt.Println("\t active_length - ", active_length)
-		// fmt.Println("\t remainder - ", remainder)
-		// fmt.Println("\t last_node - ", last_node)
-		// // fmt.Println("\t temp_edge - ", temp_edge)
-		// fmt.Println("\t ROOT - ", root)
-		// spew.Dump(root)
-		// fmt.Println("END ITERATION")
+		fmt.Println("\t ALMOST END")
+		fmt.Println("\t active_node - ", active_node)
+		fmt.Println("\t active edge - ", active_edge)
+		fmt.Println("\t active_string - ", active_string)
+		fmt.Println("\t active_length - ", active_length)
+		fmt.Println("\t remainder - ", remainder)
+		fmt.Println("\t last_node - ", last_node)
+		// fmt.Println("\t temp_edge - ", temp_edge)
+		fmt.Println("\t ROOT - ", root)
+		spew.Dump(root)
+		buf := &bytes.Buffer{}
+		memviz.Map(buf, root)
+		fmt.Println(buf.String())
+		fmt.Println("END ITERATION")
+
+		if cindex >= text_length {
+
+			// if remainder != 0 {
+			// 	fmt.Println("remainder is not 0, cleanup!")
+			// 	FLAG_END = true
+			// } else {
+				break
+			// }
+
+			cindex = text_length - 1
+			// cindex = text_length-1
+		}
+
+		fmt.Println("END ITERATION ?", FLAG_END)
+
+        if FLAG_END {
+            fmt.Println("END ITERATION ?", FLAG_END)
+        }
 	}
 	return root
 }
 
 func main() {
-	// tree := build_suffix_tree("gattaca")
-	// var text string = "abcabxabcd"
+	// var text string = "gattaca$"
+	// var text string = "abcabxabcd$"
 	// fmt.Println("start building tree")
 	// var tree *node = build_suffix_tree(text)
 	// fmt.Println("finished building tree")
@@ -314,18 +399,26 @@ func main() {
 	// fmt.Println("search tree")
 	// fmt.Println(tree.search("abce", text, 3))
 	// var tree *node = build_suffix_tree("gattaca")
-	var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC"
+	// var text string = "bananasbanananananananananabananas"
+	// var text string = "abcdefabxybcdmnabcdex"
+	// var text string = "mississippi"
+	// var text string = "almasamolmaz"
+	var text string = "cdddcdc"
+	// var text string = "dedododeeodoeodooedeeododooodoede"
+	// var text string = "panamabananas"
+	// var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC$"
+
 	// fmt.Println("start building tree")
 	var tree *node = build_suffix_tree(text)
 	// fmt.Println("finished building tree")
 	
 	// spew.Dump(tree)
 
-	buf := &bytes.Buffer{}
-	memviz.Map(buf, tree)
-	fmt.Println(buf.String())
+	// buf := &bytes.Buffer{}
+	// memviz.Map(buf, tree)
+	// fmt.Println(buf.String())
 
-	// fmt.Println(tree)
+	fmt.Println(tree)
 
 	// fmt.Println("search tree")
 	// fmt.Println(tree.search("AGACTGG", text, 3))
