@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"bytes"
 	"github.com/bradleyjkemp/memviz"
 	// "github.com/davecgh/go-spew/spew"
@@ -43,79 +42,7 @@ type node struct {
 	edges map[string]*edge
 	suffix_link *node
 	ntype string
-}
-
-// Search for a pattern
-// query string : query to search
-// text string : original text used in constructing the suffix tree
-// min_match_length int : if entire query doesn't match, report all lengths above
-//        this threshold
-// TODO: all_matches boolean : include all possible matches
-func (stree node) search(query, text string, min_match_length int) map[int]string {
-	found := make(map[int]string)
-	var qindex, findex int = 0, 0
-	var active_node *node = &stree
-	
-	for qindex < len(query) {
-		tq := string(query[qindex])
-
-		fmt.Println("tq - ", tq)
-		fmt.Println("qindex - ", qindex)
-
-		tedge, ok := active_node.edges[tq]
-		if !ok {
-			found[findex] = string(query[qindex - 1])
-			break
-		}	
-
-		fmt.Println("tedge - ", tedge)
-		findex = tedge.start_index
-		fmt.Println("findex - ", findex)
-		// found[findex] = tq
-		// fmt.Println("found - ", found)
-
-		var min_ext int = int(math.Min(float64(tedge.end_index - tedge.start_index), float64(len(query) - qindex)))
-		fmt.Println("min_ext - ", min_ext)
-
-		if text[findex: findex + min_ext] == query[qindex: qindex + min_ext] {
-			// matched edge, skip all the way
-			fmt.Println("matched substring qindex - ", qindex)
-
-			// found[findex] = string(query[qindex: qindex + min_ext])
-
-			fmt.Println("found - ", found)
-
-			if tedge.end_node != nil {
-				active_node = tedge.end_node
-			} else {
-				found[findex] = string(query[qindex])
-				break
-			}
-			qindex = qindex +  min_ext
-
-			fmt.Println("active_node - ", active_node)
-
-		} else {
-			// did not match, find the substring matched
-			// need to do some work here
-			var ftindex int = 0
-			for ftindex + findex < len(query) {
-				fmt.Println("ftindex - ", ftindex)
-
-				if query[qindex + ftindex] == text[findex + ftindex] {
-					fmt.Println("hola")
-					// found[fi/ndex] = found[findex] + string(query[qindex + ftindex])
-				} else {
-					found[findex] = string(query[qindex])
-					break;
-				}
-
-				ftindex++
-			}	
-		}
-	}
-
-	return found
+	suffix_index int
 }
 
 // suffix link structure
@@ -490,6 +417,132 @@ func update_suffix(text string, cindex int, active_node *node, active_string str
 	return false, active_node, active_string, active_length, remainder
 }
 
+func add_suffix_indices(tree *node, tree_height int, text_length int) { 
+
+	if len(tree.edges) == 0 {
+		// fmt.Println("tree len is 0 ")
+		tree.suffix_index = text_length - tree_height + 1
+		return
+	} else {
+		for _, child := range tree.edges { 
+			add_suffix_indices(child.end_node, tree_height + child.end_index - child.start_index + 1, text_length)
+			// fmt.Println("on node ", nuc, child)
+		}
+	}
+} 
+
+func get_suffix_indices(tree *node, indices []int) []int {
+
+	if len(tree.edges) == 0 {
+		indices = append(indices, tree.suffix_index)
+	} else {
+		for _, child := range tree.edges { 
+			indices = get_suffix_indices(child.end_node, indices)
+		}
+	}
+
+	return indices
+}
+
+// Search for a pattern
+// query string : query to search
+// text string : original text used in constructing the suffix tree
+// min_match_length int : if entire query doesn't match, report all lengths above
+//        this threshold
+// TODO: all_matches boolean : include all possible matches
+func (stree *node) search(query, text string) map[string][]int {
+	found := make(map[string][]int)
+	var active_node *node = stree
+	var active_edge * edge
+	var active_length int = 0
+	// var match bool = true
+	var qindex int = 0
+	// var text_length = len(text)
+	// search the branch where the node happens
+	for qindex < len(query) {
+		// tq := string(query[qindex])
+		// fmt.Println("query - ", qindex, tq)
+		// fmt.Println("active_edge - ", active_edge)
+		// fmt.Println("active_node - ", active_node)
+		// fmt.Println("active_length - ", active_length)
+
+		if active_edge == nil {
+			tedge, ok := active_node.edges[string(query[qindex - active_length])]
+
+			if ok {
+				// fmt.Println("yo matched!")
+
+				// we have a match
+				active_edge = tedge
+				active_length++
+				qindex++
+
+				if active_length == active_edge.end_index - active_edge.start_index + 1 {
+					// fmt.Println("reached edge end!")
+					active_node = active_edge.end_node
+					active_edge = nil
+					active_length = 0
+				}
+			} else {
+				break
+			}
+		} else {
+
+			// fmt.Println("active edge not nil!")
+			// fmt.Println("char in edge - ", string(text[active_edge.start_index + active_length]))
+			// fmt.Println("char in query -", string(query[qindex]))
+
+			if string(query[qindex]) == string(text[active_edge.start_index + active_length]) {
+				active_length++
+				qindex++
+
+				if active_length == active_edge.end_index - active_edge.start_index + 1 {
+					active_node = active_edge.end_node
+					active_edge = nil
+					active_length = 0
+				}
+			} else {
+				break
+			}
+		}
+	}
+
+	if active_edge != nil {
+		active_node = active_edge.end_node
+	}
+
+	// depth first traverse to get all index positions for this substring
+	var indices []int
+	indices = get_suffix_indices(active_node, indices)
+
+	found[query[0:qindex]] = indices
+	return found
+}
+
+func (stree *node) multi_search(query, text string, min_match_length int) map[string][]int {
+	matched_indices := make(map[string][]int)
+
+	for i := 0; i < len(query); i++ {
+		// fmt.Println(query[i:])
+
+		tempind := stree.search(query[i:], text)
+
+		for tk, tv := range tempind {
+			// fmt.Println("tk, tv", tk, tv)
+			val, ok := matched_indices[tk]
+			if ok {
+				for _, vt := range val {
+					matched_indices[tk] = append(matched_indices[tk], vt)
+				}
+			} else {
+				matched_indices[tk] = tv
+			}
+		}
+	}
+
+	return matched_indices
+}
+
 func main() {
 	// var text string = "gattaca$"
 	// var text string = "abcabxabcd$"
@@ -502,26 +555,34 @@ func main() {
 	// var tree *node = build_suffix_tree("gattaca")
 	// var text string = "bananasbanananananananananabananas$"
 	// var text string = "abcdefabxybcdmnabcdex"
-	// var text string = "mississippi"
+	var text string = "mississippi"
 	// var text string = "almasamolmaz"
 	// var text string = "cdddcdc"
 	// var text string = "dedododeeodoeodooedeeododooodoede"
 	// var text string = "panamabananas"
-	var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC$"
+	// var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC"
 
 	// fmt.Println("start building tree")
 	var tree *node = build_suffix_tree(text)
 	// fmt.Println("finished building tree")
-	
 	// spew.Dump(tree)
 
 	buf := &bytes.Buffer{}
 	memviz.Map(buf, tree)
 	fmt.Println(buf.String())
 
-	// fmt.Println(tree)
+	add_suffix_indices(tree, 0, len(text))
 
-	// fmt.Println("search tree")
-	// fmt.Println(tree.search("AGACTGG", text, 3))
+	buf2 := &bytes.Buffer{}
+	memviz.Map(buf2, tree)
+	fmt.Println(buf2.String())
 
+	fmt.Println("search tree for get all possible indexes where the suffix matches")
+	var query string = "issp"
+	fmt.Println(query)
+	// fmt.Println(query[0:len(query)])
+	
+	matched_indices := tree.multi_search(query, text, 2)
+
+	fmt.Println("matches - ", matched_indices)
 }
