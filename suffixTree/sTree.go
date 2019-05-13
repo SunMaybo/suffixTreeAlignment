@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"bytes"
+	"os"
 	"github.com/bradleyjkemp/memviz"
 	// "github.com/davecgh/go-spew/spew"
 )
@@ -17,7 +18,7 @@ import (
 // 2. Edges end in a node -----> ()
 // 3. Once an edge is created, we assume it extends all the way to the 
 //    length of the text, unless it gets split
-// 4. The 
+
 // Future updates
 // 1. exend this to build from multiple strings - Generalized Suffix tree
 // 2. parallel implementation - https://people.csail.mit.edu/jshun/JDA2017.pdf
@@ -65,6 +66,7 @@ func build_suffix_tree(text string) *node {
 	var text_length = len(text)
 	var cindex int = 0
 
+	// build the tree for every character in the string
 	for cindex < text_length {
 		// fmt.Println(" ITERATING ", cindex)
 		ts := string(text[cindex])
@@ -114,6 +116,7 @@ func build_suffix_tree(text string) *node {
 					remainder++
 				} else {
 					remainder++
+					// there's a mismatch, add this suffix to the tree
 					remainder, active_node, active_string, active_length = propagate_suffix(root, text, cindex, remainder, active_node, active_string, active_length)
 				}
 			} else {
@@ -134,6 +137,7 @@ func build_suffix_tree(text string) *node {
 				if string(text[posi]) != ts {
 					// fmt.Println("\t not same char ")
 					remainder++
+					// edge doesn't end with the same character, add this suffix to the tree
 					remainder, active_node, active_string, active_length = propagate_suffix(root, text, cindex, remainder, active_node, active_string, active_length)
 				} else {
 					// tedge, _ := active_node.edges[active_string]
@@ -190,6 +194,7 @@ func build_suffix_tree(text string) *node {
 	return root
 }
 
+// adds the current suffix to the tree (last character)
 func propagate_suffix(root *node, text string, cindex int, remainder int, active_node *node, active_string string, active_length int) (int, *node, string, int) {
 	var temp_node *node
 	var last_node *node
@@ -228,6 +233,8 @@ func propagate_suffix(root *node, text string, cindex int, remainder int, active
 		// fmt.Println("\t\t\t active_length_suffixes - ", active_length_suffixes)
 		// fmt.Println("\t\t\t remainder - ", remainder)
 
+		// if a node is added in the current iteration
+		// add a suffix link. only if the previous node was not a root
 		if ok {
 			if active_length == 1 && temp_node != nil && active_node.ntype != "root" {
 				temp_node.suffix_link = active_node
@@ -304,6 +311,7 @@ func propagate_suffix(root *node, text string, cindex int, remainder int, active
 	return remainder, active_node, active_string, active_length
 }
 
+// walk the tree using active node, string & length to get to the last character
 func walk_stree(text string, index int, active_node *node, active_string string, active_length int, suffixes string, remainder int) (*node, string, int, int) {
 	// fmt.Println("\t\t walk_stree - ")
 	// fmt.Println("\t\t\t suffixes - ", suffixes)
@@ -361,6 +369,7 @@ func walk_stree(text string, index int, active_node *node, active_string string,
 	return active_node, active_string, active_length, remainder
 }
 
+// This adds the suffix to the tree
 func update_suffix(text string, cindex int, active_node *node, active_string string, active_length int, suffixes string, remainder int) (bool, *node, string, int, int) {
 	suffix_update := suffixes[remainder:]
 	text_length := len(text)
@@ -417,6 +426,7 @@ func update_suffix(text string, cindex int, active_node *node, active_string str
 	return false, active_node, active_string, active_length, remainder
 }
 
+// Walks suffix tree and adds indices to the leaf node
 func add_suffix_indices(tree *node, tree_height int, text_length int) { 
 
 	if len(tree.edges) == 0 {
@@ -431,6 +441,7 @@ func add_suffix_indices(tree *node, tree_height int, text_length int) {
 	}
 } 
 
+// Get all indices from a given node
 func get_suffix_indices(tree *node, indices []int) []int {
 
 	if len(tree.edges) == 0 {
@@ -447,9 +458,6 @@ func get_suffix_indices(tree *node, indices []int) []int {
 // Search for a pattern
 // query string : query to search
 // text string : original text used in constructing the suffix tree
-// min_match_length int : if entire query doesn't match, report all lengths above
-//        this threshold
-// TODO: all_matches boolean : include all possible matches
 func (stree *node) search(query, text string) map[string][]int {
 	found := make(map[string][]int)
 	var active_node *node = stree
@@ -519,6 +527,9 @@ func (stree *node) search(query, text string) map[string][]int {
 	return found
 }
 
+// Search for a pattern for all suffixes of the query
+// min_match_length int : if entire query doesn't match, report all lengths above
+//        this threshold.
 func (stree *node) multi_search(query, text string, min_match_length int) map[string][]int {
 	matched_indices := make(map[string][]int)
 
@@ -529,13 +540,15 @@ func (stree *node) multi_search(query, text string, min_match_length int) map[st
 
 		for tk, tv := range tempind {
 			// fmt.Println("tk, tv", tk, tv)
-			val, ok := matched_indices[tk]
-			if ok {
-				for _, vt := range val {
-					matched_indices[tk] = append(matched_indices[tk], vt)
+			if len(tk) > min_match_length {
+				val, ok := matched_indices[tk]
+				if ok {
+					for _, vt := range val {
+						matched_indices[tk] = append(matched_indices[tk], vt)
+					}
+				} else {
+					matched_indices[tk] = tv
 				}
-			} else {
-				matched_indices[tk] = tv
 			}
 		}
 	}
@@ -543,46 +556,70 @@ func (stree *node) multi_search(query, text string, min_match_length int) map[st
 	return matched_indices
 }
 
+// main functions
+// TODO: accept command line arguments
 func main() {
-	// var text string = "gattaca$"
-	// var text string = "abcabxabcd$"
-	// fmt.Println("start building tree")
-	// var tree *node = build_suffix_tree(text)
-	// fmt.Println("finished building tree")
 
-	// fmt.Println("search tree")
-	// fmt.Println(tree.search("abce", text, 3))
-	// var tree *node = build_suffix_tree("gattaca")
-	// var text string = "bananasbanananananananananabananas$"
-	// var text string = "abcdefabxybcdmnabcdex"
-	var text string = "mississippi"
-	// var text string = "almasamolmaz"
-	// var text string = "cdddcdc"
-	// var text string = "dedododeeodoeodooedeeododooodoede"
-	// var text string = "panamabananas"
-	// var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC"
+	// first argument is the name of the binary
+	args := os.Args[1:]
 
-	// fmt.Println("start building tree")
+
+	// arg1 should be the text to build a suffix tree from
+	text := args[0]
 	var tree *node = build_suffix_tree(text)
-	// fmt.Println("finished building tree")
-	// spew.Dump(tree)
-
-	buf := &bytes.Buffer{}
-	memviz.Map(buf, tree)
-	fmt.Println(buf.String())
-
 	add_suffix_indices(tree, 0, len(text))
 
 	buf2 := &bytes.Buffer{}
 	memviz.Map(buf2, tree)
 	fmt.Println(buf2.String())
 
-	fmt.Println("search tree for get all possible indexes where the suffix matches")
-	var query string = "issp"
-	fmt.Println(query)
-	// fmt.Println(query[0:len(query)])
-	
-	matched_indices := tree.multi_search(query, text, 2)
+	// arg2 should be the query to search (optional)
+	if len(args) > 1 {
+		query := args[1]
 
-	fmt.Println("matches - ", matched_indices)
+		matches := tree.multi_search(query, text, 2)
+		fmt.Println("query matches - ", matches)
+	}
+
+	// // var text string = "gattaca$"
+	// // var text string = "abcabxabcd$"
+	// // fmt.Println("start building tree")
+	// // var tree *node = build_suffix_tree(text)
+	// // fmt.Println("finished building tree")
+
+	// // fmt.Println("search tree")
+	// // fmt.Println(tree.search("abce", text, 3))
+	// // var tree *node = build_suffix_tree("gattaca")
+	// // var text string = "bananasbanananananananananabananas$"
+	// // var text string = "abcdefabxybcdmnabcdex"
+	// var text string = "mississippi@tississilli$"
+	// // var text string = "almasamolmaz"
+	// // var text string = "cdddcdc"
+	// // var text string = "dedododeeodoeodooedeeododooodoede"
+	// // var text string = "panamabananas"
+	// // var text string = "GAGACCTCGATCGGCCAACTCATCTGTGAAACGTCAGTCATTGTAAGACTGGACATTTAGGAAGTAAGCCTTTTTCTTATAGCCAATCCCGCTTTCAATTGAACGGCTAAACGAAGGTCGTTTGCCACTGATTAGCAATTGGTCCGGTGAAAAATTGTGTATTTTGGAAAGATGTAATCCTGCGAGACCTCGATCGGC"
+
+	// // fmt.Println("start building tree")
+	// var tree *node = build_suffix_tree(text)
+	// // fmt.Println("finished building tree")
+	// // spew.Dump(tree)
+
+	// // buf := &bytes.Buffer{}
+	// // memviz.Map(buf, tree)
+	// // fmt.Println(buf.String())
+
+	// add_suffix_indices(tree, 0, len(text))
+
+	// buf2 := &bytes.Buffer{}
+	// memviz.Map(buf2, tree)
+	// fmt.Println(buf2.String())
+
+	// // fmt.Println("search tree for get all possible indexes where the suffix matches")
+	// // var query string = "issp"
+	// // fmt.Println(query)
+	// // fmt.Println(query[0:len(query)])
+	
+	// // matched_indices := tree.multi_search(query, text, 2)
+
+	// // fmt.Println("matches - ", matched_indices)
 }
