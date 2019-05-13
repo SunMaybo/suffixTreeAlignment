@@ -1,21 +1,56 @@
-Local alignment search using suffix tree
+## Local alignment search using suffix tree
 
-code is in suffixTree/stree.go
+Note: Written in GOLANG, to download go for your operating system, visit [golang.org](https://golang.org/)
 
-To Build
+### Installation
+
+The code depends on the [memviz](http://github.com/bradleyjkemp/memviz) package for visualizing data structures in memory as graphViz plots.
 
 ```
-cd suffixTree
-go build
+> go get github.com/bradleyjkemp/memviz
 ```
 
-can now output to a graphviz plot to visualize the suffix tree
+### Build
 
-1. Install GraphViz
-2. `./suffixTree | dot -Tpng -o graph.png`
+```
+> cd suffixTree
+> go build
+```
 
-Written in GOLANG
+This will generate a binary `./suffixTree`
 
-Note: can/might have bugs
+### Usage
 
-- Found none so far :)
+The binary generated from the previous step takes two arguments
+
+- Text to build the suffix tree
+- Query string to search
+
+#### Building a Suffix Tree from text
+
+```
+> ./suffixTree mississippi
+```
+
+This prints a graphViz representation of the suffix tree.
+
+Install [GraphViz](https://graphviz.org/) or use [webgraphviz](http://www.webgraphviz.com/) to plot.
+
+If you have graphViz installed locally -
+
+```
+> ./suffixTree mississippi | dot -Tpng -o graph.png
+```
+
+#### Search the suffix tree for a query string
+
+The second argument to the suffix tree is the query string and will print all index positions where the string matches
+
+```
+> ./suffixTree mississippi issip
+```
+
+Note:
+
+- can/might have bugs (yet to find one)
+- has too many print statements (commented out)
