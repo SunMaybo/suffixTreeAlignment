@@ -32,11 +32,7 @@ The binary generated from the previous step takes two arguments
 > ./suffixTree mississippi
 ```
 
-This prints a graphViz representation of the suffix tree.
-
-Install [GraphViz](https://graphviz.org/) or use [webgraphviz](http://www.webgraphviz.com/) to plot.
-
-If you have graphViz installed locally -
+This prints a graphViz representation of the suffix tree. Install [GraphViz](https://graphviz.org/) or use [webgraphviz](http://www.webgraphviz.com/) to plot. If you have graphViz installed locally -
 
 ```
 > ./suffixTree mississippi | dot -Tpng -o graph.png
@@ -52,5 +48,5 @@ The second argument to the suffix tree is the query string and will print all in
 
 Note:
 
-- can/might have bugs
-- lots of print statements
+- can/might have bugs (yet to find one)
+- has too many print statements (commented out)
