@@ -38,6 +38,8 @@ This prints a graphViz representation of the suffix tree. Install [GraphViz](htt
 > ./suffixTree mississippi | dot -Tpng -o graph.png
 ```
 
+![SUFFIX TREE](suffixTree/figure1.png "Suffix Tree for MISSISSIPPI$")
+
 #### Search the suffix tree for a query string
 
 The second argument to the suffix tree is the query string and will print all index positions where the string matches

@@ -10,6 +10,8 @@ import (
 )
 // was very useful for debugging - 
 // the code follows Ukkonen's algorithm from the lecture notes
+// and the stackoverflow article from the notes - 
+// https://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algorithm-in-plain-english
 
 // The code is structured as follows (TODO: draw a better ascii diagram)
 // 1. Nodes have edges  * -------- () ------- * 
