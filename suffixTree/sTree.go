@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"bytes"
 	"os"
+	"encoding/json"
 	"github.com/bradleyjkemp/memviz"
 	// "github.com/davecgh/go-spew/spew"
 )
@@ -497,6 +498,11 @@ func (stree *node) search(query, text string) map[string][]int {
 		} else {
 
 			// fmt.Println("active edge not nil!")
+			// fmt.Println(active_edge)
+			// fmt.Println(active_edge.start_index)
+			// fmt.Println(active_length)
+			// fmt.Println(text)
+
 			// fmt.Println("char in edge - ", string(text[active_edge.start_index + active_length]))
 			// fmt.Println("char in query -", string(query[qindex]))
 
@@ -530,24 +536,28 @@ func (stree *node) search(query, text string) map[string][]int {
 // Search for a pattern for all suffixes of the query
 // min_match_length int : if entire query doesn't match, report all lengths above
 //        this threshold.
-func (stree *node) multi_search(query, text string, min_match_length int) map[string][]int {
-	matched_indices := make(map[string][]int)
+func (stree *node) multi_search(query, text string, min_match_length int) map[string]map[string][]int {
+	matched_indices := make(map[string]map[string][]int)
 
 	for i := 0; i < len(query); i++ {
-		// fmt.Println(query[i:])
+		fmt.Println(query[i:])
 
 		tempind := stree.search(query[i:], text)
+
+		fmt.Println(tempind)
 
 		for tk, tv := range tempind {
 			// fmt.Println("tk, tv", tk, tv)
 			if len(tk) > min_match_length {
-				val, ok := matched_indices[tk]
+				_, ok := matched_indices[tk]
 				if ok {
-					for _, vt := range val {
-						matched_indices[tk] = append(matched_indices[tk], vt)
-					}
+					// for _, vt := range val {
+					// 	matched_indices[tk]["query_index"] = append(matched_indices[tk]["query_index"], i)
+					// 	matched_indices[tk]["text_index"] = append(matched_indices[tk]["text_index"], vt)
+					// }
 				} else {
-					matched_indices[tk] = tv
+					tmp_val := map[string][]int{"query_index": []int{i}, "text_index": tv }
+					matched_indices[tk] = tmp_val
 				}
 			}
 		}
@@ -576,9 +586,10 @@ func main() {
 	// arg2 should be the query to search (optional)
 	if len(args) > 1 {
 		query := args[1]
-
+		fmt.Println("query is ", query)
 		matches := tree.multi_search(query, text, 2)
-		fmt.Println("query matches - ", matches)
+		match_json, _ := json.Marshal(matches)
+		fmt.Println("query matches - ", string(match_json))
 	}
 
 	// // var text string = "gattaca$"
