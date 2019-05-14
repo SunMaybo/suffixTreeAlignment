@@ -542,26 +542,39 @@ func (stree *node) multi_search(query, text string, min_match_length int) map[st
 	matched_indices := make(map[string]map[string][]int)
 
 	for i := 0; i < len(query); i++ {
-		fmt.Println(query[i:])
+		// fmt.Println(query[i:])
 
 		tempind := stree.search(query[i:], text)
 
-		fmt.Println(tempind)
+		// fmt.Println(tempind)
 
 		for tk, tv := range tempind {
 			// fmt.Println("tk, tv", tk, tv)
 			if len(tk) > min_match_length {
 				_, ok := matched_indices[tk]
 				if ok {
-					// for _, vt := range val {
-					// 	matched_indices[tk]["query_index"] = append(matched_indices[tk]["query_index"], i)
-					// 	matched_indices[tk]["text_index"] = append(matched_indices[tk]["text_index"], vt)
-					// }
+					for _, vt := range tv {
+						matched_indices[tk]["query_index"] = append(matched_indices[tk]["query_index"], i)
+						matched_indices[tk]["text_index"] = append(matched_indices[tk]["text_index"], vt)
+					}
 				} else {
-					tmp_val := map[string][]int{"query_index": []int{i}, "text_index": tv }
+					// fmt.Println("match doesn't exist")
+					len_match := len(tv) 
+					// fmt.Println("len_match", len_match)
+
+					tmp_val := map[string][]int{"query_index": make([]int, len_match), "text_index": tv }
+					// fmt.Println("tmp_val", tmp_val)
+
+					for j, _ := range tv {
+						tmp_val["query_index"][j] = i
+						// 	matched_indices[tk]["text_index"] = append(matched_indices[tk]["text_index"], vt)
+						}
 					matched_indices[tk] = tmp_val
 				}
 			}
+
+			// fmt.Println("matched_indices - ", matched_indices)
+
 		}
 	}
 
