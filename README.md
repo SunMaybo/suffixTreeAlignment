@@ -52,3 +52,12 @@ Note:
 
 - can/might have bugs (yet to find one)
 - has too many print statements (commented out)
+
+After the output of the search of a query string Q in the suffix tree created from text T, use the Python code `extend_max_match.py` to extend the maximum exact match to obtain a local alignment. The script is written in [Python3](https://www.python.org/).
+
+The script accepts all exact matches between Q and T, and builds a heuristic local alignment that is centered around the maximum exact match. Each line in the input file is formatted as: `[<length of match> <index in Q> <indices in T>]`. All suffixes of the query string are matched and the longest exact matches are listed in the input.
+
+Run the Python script as:
+```
+ > Python3 extend_max_match.py input_file.txt
+ ```
